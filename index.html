@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DP 玩家统计面板</title>
+  <style>
+    :root {
+      --primary-pink: #ff6b9d;
+      --primary-blue: #5e9fff;
+      --secondary-pink: #ffc0cb80;
+      --secondary-blue: #add8e680;
+      --glass-bg: rgba(255, 255, 255, 0.25);
+      --text-dark: #333;
+      --card-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--secondary-pink), var(--secondary-blue));
+      min-height: 100vh;
+      padding: 1rem;
+      color: var(--text-dark);
+    }
+
+    .container {
+      max-width: 95%;
+      margin: 0 auto;
+    }
+
+    .search-box {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--card-shadow);
+      margin: 4rem 0;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .search-box:focus-within {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(31, 38, 135, 0.3);
+    }
+
+    .input-group {
+      display: flex;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    input {
+      flex: 1;
+      padding: 1rem 1.5rem;
+      border: none;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.9);
+      outline: none;
+    }
+
+    button {
+      padding: 1rem 2rem;
+      border: none;
+      background: linear-gradient(to right, var(--primary-pink), var(--primary-blue));
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      background: linear-gradient(to right, #ff5a92, #4d8cff);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+
+    @media (max-width: 960px) {
+      body {
+        padding: 1rem;
+      }
+      
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+      
+      .input-group {
+        flex-direction: column;
+        border-radius: 20px;
+      }
+      
+      input {
+        border-radius: 20px 20px 0 0;
+      }
+      
+      button {
+        border-radius: 0 0 20px 20px;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="main">
+
+    <div class="search-box" id="searchBox">
+      <div class="input-group">
+        <input type="text" id="playerInput" placeholder="输入你的ID..." autocomplete="off">
+        <button id="searchBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          Search
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="dashboard">
+      <div id="loader" style="display:none;">Loading...</div>
+      <img id="status-image" 
+           alt="Player status image" 
+           style="display:none; max-width:100%; border: 1px solid #ddd; margin-top: 10px;">
+    </div>
+    
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const playerInput = document.getElementById('playerInput');
+      const searchBtn = document.getElementById('searchBtn');
+      const loader = document.getElementById('loader');
+      
+      // 事件监听
+      searchBtn.addEventListener('click', fetchPlayerData);
+      playerInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') fetchPlayerData();
+      });
+
+      async function fetchPlayerData() {
+        const playername = playerInput.value.trim();
+        if (!playername) {
+          alert('请输入玩家名');
+          return;
+        }
+        
+        try {
+          // 显示加载动画
+          loader.style.display = 'block';
+          const browserWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+          const width = Math.min(Math.max(browserWidth, 720), 1920);
+          const response = await fetch(`http://dp4.us:20020/status/${playername}/${width}`);
+  
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server error: ${response.status} - ${errorText}`);
+          }
+                  
+          const imageBlob = await response.blob();
+          const imageUrl = URL.createObjectURL(imageBlob);
+          
+          const main = document.getElementById('dashboard');
+          main.style.setProperty(`display`, 'flex');
+          main.style.setProperty(`align-items`, 'center');
+          main.style.setProperty(`flex-direction`, 'column');
+          main.innerHTML = `
+          <img id="status-image" 
+           alt="Player status image" 
+           src="${imageUrl}"
+           style="display: block; max-width:100%; border: 1px solid #ddd; margin-top: 10px;">
+          `
+        } catch (error) {
+          console.error('Error:', error);
+          loader.textContent = `Error: ${error.message}`;
+        } finally {
+          loader.style.display = 'none';
+        }
+      }
+    });
+  </script>
+</body>
+</html>
